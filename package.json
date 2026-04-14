@@ -1,0 +1,82 @@
+{
+  "name": "container-transport",
+  "version": "0.1.0",
+  "private": true,
+  "main": "electron-main.js",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:studio": "prisma studio",
+    "db:create": "node scripts/create-db.js",
+    "db:seed": "prisma db seed",
+    "desktop:dev": "cross-env ELECTRON_FORCE_DEV=1 electron .",
+    "desktop:start": "cross-env ELECTRON_FORCE_PRODUCTION=1 electron .",
+    "desktop:dist": "npm run build && npx electron-builder --win --x64"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^5.2.2",
+    "bcryptjs": "^3.0.3",
+    "china-area-data": "^5.0.1",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.7.0",
+    "mysql2": "^3.20.0",
+    "next": "16.2.2",
+    "next-auth": "^4.24.13",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "react-hook-form": "^7.72.0",
+    "tailwind-merge": "^3.5.0",
+    "xlsx": "^0.18.5",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "electron-builder": "^24.13.3",
+    "electron": "^32.1.2",
+    "@prisma/client": "^5.21.1",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20.19.37",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "cross-env": "^7.0.3",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.2",
+    "prisma": "^5.21.1",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.ts"
+  },
+  "build": {
+    "appId": "com.seven.containertransport",
+    "productName": "集装箱运输管理系统",
+    "asar": false,
+    "directories": {
+      "output": "dist-desktop"
+    },
+    "files": [
+      "electron-main.js",
+      "package.json",
+      ".env",
+      ".env.production",
+      ".next/**",
+      "public/**",
+      "prisma/**",
+      "scripts/**",
+      "lib/**",
+      "app/**",
+      "components/**",
+      "node_modules/**"
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    }
+  }
+}

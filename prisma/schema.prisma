@@ -1,0 +1,257 @@
+// 集装箱运输管理系统 Prisma Schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String          @id @default(cuid())
+  username        String          @db.VarChar(50)
+  account         String          @unique @db.VarChar(100)
+  password        String          @db.VarChar(255)
+  role            Role            @default(DRIVER)
+  status          RecordStatus    @default(ENABLED)
+  driverProfileId String?         @unique
+  driverProfile   Driver?         @relation("UserDriverBinding", fields: [driverProfileId], references: [id], onDelete: SetNull)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  containerTypes  ContainerType[]
+  companies       Company[]
+  vehiclePlates   VehiclePlate[]
+  drivers         Driver[]        @relation("DriverCreator")
+  dropLocations   DropLocation[]
+  createdLoads    Load[]          @relation("LoadCreator")
+  operatedLoads   Load[]          @relation("LoadOperator")
+  loadHistory     LoadHistory[]
+  operationLogs   OperationLog[]  @relation("OperationActor")
+
+  @@index([username])
+  @@index([role])
+  @@index([status])
+}
+
+model Company {
+  id               String       @id @default(cuid())
+  name             String       @db.VarChar(100)
+  socialCreditCode String       @unique @db.VarChar(50)
+  contactName      String       @db.VarChar(50)
+  contactPhone     String       @db.VarChar(20)
+  status           RecordStatus @default(ENABLED)
+  remark           String?      @db.Text
+  createdBy        String
+  user             User         @relation(fields: [createdBy], references: [id])
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  loads            Load[]
+
+  @@index([name])
+  @@index([socialCreditCode])
+  @@index([status])
+  @@index([createdBy])
+}
+
+model ContainerType {
+  id        String       @id @default(cuid())
+  name      String       @db.VarChar(50)
+  code      String?      @unique @db.VarChar(50)
+  status    RecordStatus @default(ENABLED)
+  remark    String?      @db.Text
+  createdBy String
+  user      User         @relation(fields: [createdBy], references: [id])
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  loads     Load[]
+
+  @@index([name])
+  @@index([status])
+  @@index([createdBy])
+}
+
+model VehiclePlate {
+  id             String       @id @default(cuid())
+  plateNumber    String       @unique @db.VarChar(20)
+  vehicleType    String?      @db.VarChar(50)
+  teamName       String?      @db.VarChar(50)
+  status         RecordStatus @default(ENABLED)
+  remark         String?      @db.Text
+  createdBy      String
+  user           User         @relation(fields: [createdBy], references: [id])
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  defaultDrivers Driver[]     @relation("DefaultVehicle")
+  loads          Load[]
+
+  @@index([plateNumber])
+  @@index([status])
+  @@index([createdBy])
+}
+
+model Driver {
+  id               String        @id @default(cuid())
+  name             String        @db.VarChar(50)
+  phone            String        @db.VarChar(20)
+  defaultVehicleId String?
+  defaultVehicle   VehiclePlate? @relation("DefaultVehicle", fields: [defaultVehicleId], references: [id], onDelete: SetNull)
+  status           RecordStatus  @default(ENABLED)
+  remark           String?       @db.Text
+  createdBy        String
+  user             User          @relation("DriverCreator", fields: [createdBy], references: [id])
+  boundUser        User?         @relation("UserDriverBinding")
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  loadsAsDriver    Load[]        @relation("LoadDriver")
+
+  @@index([name])
+  @@index([phone])
+  @@index([defaultVehicleId])
+  @@index([status])
+  @@index([createdBy])
+}
+
+model DropLocation {
+  id            String       @id @default(cuid())
+  name          String       @db.VarChar(100)
+  province      String       @db.VarChar(50)
+  city          String       @db.VarChar(50)
+  district      String       @db.VarChar(50)
+  detailAddress String       @db.VarChar(200)
+  fullAddress   String       @db.VarChar(255)
+  contactName   String?      @db.VarChar(50)
+  contactPhone  String?      @db.VarChar(20)
+  status        RecordStatus @default(ENABLED)
+  remark        String?      @db.Text
+  createdBy     String
+  user          User         @relation(fields: [createdBy], references: [id])
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  loads         Load[]       @relation("LoadDropLocation")
+
+  @@index([name])
+  @@index([province, city, district])
+  @@index([status])
+  @@index([createdBy])
+}
+
+model Load {
+  id              String        @id @default(cuid())
+  loadNumber      String        @unique @db.VarChar(32)
+  status          LoadStatus    @default(DRAFT)
+  pickupAt        DateTime?
+  destination     String        @db.VarChar(100)
+  companyId       String?
+  company         Company?      @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  containerTypeId String
+  containerType   ContainerType @relation(fields: [containerTypeId], references: [id])
+  blNumber        String        @db.VarChar(100)
+  vesselVoyage    String?       @db.VarChar(100)
+  containerNumber String        @db.VarChar(50)
+  sealNumber      String?       @db.VarChar(50)
+  dropLocationId  String
+  dropLocation    DropLocation  @relation("LoadDropLocation", fields: [dropLocationId], references: [id])
+  vehicleId       String
+  vehicle         VehiclePlate  @relation(fields: [vehicleId], references: [id])
+  driverId        String
+  driver          Driver        @relation("LoadDriver", fields: [driverId], references: [id])
+  operatorUserId  String
+  operatorUser    User          @relation("LoadOperator", fields: [operatorUserId], references: [id])
+  totalFee        Decimal       @default(0) @db.Decimal(10, 2)
+  gasFee          Decimal       @default(0) @db.Decimal(10, 2)
+  driverPay       Decimal       @default(0) @db.Decimal(10, 2)
+  otherFee        Decimal       @default(0) @db.Decimal(10, 2)
+  otherFeeRemark  String?       @db.VarChar(200)
+  balanceFee      Decimal       @default(0) @db.Decimal(10, 2)
+  remark          String?       @db.Text
+  createdBy       String
+  createdByUser   User          @relation("LoadCreator", fields: [createdBy], references: [id])
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  history         LoadHistory[]
+
+  @@index([status])
+  @@index([destination])
+  @@index([companyId])
+  @@index([containerTypeId])
+  @@index([blNumber])
+  @@index([containerNumber])
+  @@index([dropLocationId])
+  @@index([vehicleId])
+  @@index([driverId])
+  @@index([operatorUserId])
+  @@index([pickupAt])
+  @@index([createdAt])
+  @@index([createdBy])
+}
+
+model LoadHistory {
+  id          String   @id @default(cuid())
+  loadId      String
+  load        Load     @relation(fields: [loadId], references: [id], onDelete: Cascade)
+  action      String
+  description String?  @db.Text
+  changedBy   String
+  user        User     @relation(fields: [changedBy], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@index([loadId])
+}
+
+model OperationLog {
+  id            String          @id @default(cuid())
+  actorId       String?
+  actor         User?           @relation("OperationActor", fields: [actorId], references: [id], onDelete: SetNull)
+  actorUsername String          @db.VarChar(50)
+  actorAccount  String          @db.VarChar(100)
+  action        OperationAction
+  module        OperationModule
+  businessId    String?         @db.VarChar(191)
+  summary       String          @db.VarChar(255)
+  createdAt     DateTime        @default(now())
+
+  @@index([actorId])
+  @@index([action])
+  @@index([module])
+  @@index([businessId])
+  @@index([createdAt])
+}
+
+enum Role {
+  ADMIN
+  DRIVER
+}
+
+enum RecordStatus {
+  ENABLED
+  DISABLED
+}
+
+enum LoadStatus {
+  DRAFT
+  ASSIGNED
+  IN_TRANSIT
+  DELIVERED
+  COMPLETED
+  CANCELLED
+}
+
+enum OperationAction {
+  CREATE
+  UPDATE
+  DELETE
+  RESET_PASSWORD
+}
+
+enum OperationModule {
+  USER_MANAGEMENT
+  LOAD_MANAGEMENT
+  CONTAINER_TYPE_MANAGEMENT
+  COMPANY_MANAGEMENT
+  VEHICLE_MANAGEMENT
+  DRIVER_MANAGEMENT
+  DROP_LOCATION_MANAGEMENT
+  DATABASE_BACKUP
+}
